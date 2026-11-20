@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Performance Warning System</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c10;
+  --surface: #111318;
+  --surface2: #181c24;
+  --border: #1f2530;
+  --accent: #00d4ff;
+  --accent2: #7c3aed;
+  --accent3: #10b981;
+  --danger: #ef4444;
+  --warn: #f59e0b;
+  --safe: #10b981;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --font: 'Space Grotesk', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden}
+.noise{position:fixed;inset:0;opacity:.03;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");z-index:999}
+.glow-top{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:800px;height:400px;background:radial-gradient(ellipse,rgba(0,212,255,.08) 0%,transparent 70%);pointer-events:none;z-index:0}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(10,12,16,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 2rem;height:60px;display:flex;align-items:center;gap:2rem}
+.nav-brand{display:flex;align-items:center;gap:.75rem;font-weight:700;font-size:1.1rem;letter-spacing:-.02em}
+.nav-brand .dot{width:8px;height:8px;background:var(--accent);border-radius:50%;box-shadow:0 0 12px var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.8)}}
+.nav-tabs{display:flex;gap:.25rem;margin-left:auto}
+.tab-btn{padding:.5rem 1.2rem;border-radius:6px;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-size:.85rem;cursor:pointer;transition:.2s;font-weight:500}
+.tab-btn.active,.tab-btn:hover{background:var(--surface2);color:var(--text)}
+.tab-btn.active{color:var(--accent)}
+
+/* HERO */
+.hero{padding:3rem 2rem 2rem;max-width:1400px;margin:0 auto;position:relative;z-index:1}
+.hero h1{font-size:clamp(1.8rem,4vw,3rem);font-weight:700;letter-spacing:-.04em;line-height:1.1;margin-bottom:.5rem}
+.hero h1 span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--muted);font-size:.95rem;margin-bottom:2rem}
+
+/* STATS CARDS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:2.5rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;position:relative;overflow:hidden;transition:.3s}
+.stat-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,212,255,.03),transparent);pointer-events:none}
+.stat-card:hover{border-color:rgba(0,212,255,.3);transform:translateY(-2px)}
+.stat-label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem}
+.stat-value{font-size:2rem;font-weight:700;font-family:var(--mono);line-height:1}
+.stat-sub{font-size:.8rem;color:var(--muted);margin-top:.25rem}
+.stat-card.danger .stat-value{color:var(--danger)}
+.stat-card.warn .stat-value{color:var(--warn)}
+.stat-card.safe .stat-value{color:var(--safe)}
+.stat-card.accent .stat-value{color:var(--accent)}
+
+/* SUBJECT TABS */
+.subj-tabs{display:flex;gap:.5rem;margin-bottom:1.5rem}
+.subj-tab{padding:.6rem 1.5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-family:var(--font);font-size:.85rem;font-weight:500;transition:.2s}
+.subj-tab.active{background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(124,58,237,.1));border-color:var(--accent);color:var(--accent)}
+
+/* CONTROLS */
+.controls{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;align-items:center}
+.search-box{flex:1;min-width:200px;position:relative}
+.search-box input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem .65rem 2.5rem;color:var(--text);font-family:var(--font);font-size:.9rem;outline:none;transition:.2s}
+.search-box input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
+.search-icon{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.9rem}
+select{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;color:var(--text);font-family:var(--font);font-size:.85rem;outline:none;cursor:pointer}
+select:focus{border-color:var(--accent)}
+.count-badge{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.4rem .8rem;font-family:var(--mono);font-size:.8rem;color:var(--muted);white-space:nowrap}
+
+/* TABLE */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:2rem}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--surface2)}
+th{padding:1rem;text-align:left;font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;white-space:nowrap}
+th:first-child{padding-left:1.5rem}
+td{padding:.85rem 1rem;border-top:1px solid var(--border);font-size:.85rem;vertical-align:middle}
+td:first-child{padding-left:1.5rem}
+tr:hover td{background:rgba(255,255,255,.02)}
+.student-id{font-family:var(--mono);color:var(--muted);font-size:.8rem}
+.student-name{font-weight:500}
+.score-bar{display:flex;align-items:center;gap:.75rem}
+.bar-bg{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;min-width:60px}
+.bar-fill{height:100%;border-radius:2px;transition:width .3s}
+.score-num{font-family:var(--mono);font-size:.85rem;min-width:32px;text-align:right}
+.risk-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .8rem;border-radius:20px;font-size:.75rem;font-weight:600;white-space:nowrap}
+.risk-badge.high{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
+.risk-badge.medium{background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.3)}
+.risk-badge.low{background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.3)}
+.pred-tag{font-family:var(--mono);font-size:.82rem;color:var(--accent)}
+.pagination{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:1.25rem}
+.pg-btn{width:36px;height:36px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:.85rem;transition:.2s;display:flex;align-items:center;justify-content:center}
+.pg-btn:hover,.pg-btn.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700}
+.pg-btn:disabled{opacity:.3;cursor:default}
+.pg-info{font-size:.8rem;color:var(--muted);font-family:var(--mono);padding:0 .5rem}
+
+/* PREDICT PANEL */
+.predict-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:2rem;margin-bottom:2rem}
+.predict-section h2{font-size:1.1rem;font-weight:600;margin-bottom.1rem;letter-spacing:-.02em;margin-bottom:1.5rem;display:flex;align-items:center;gap:.75rem}
+.predict-section h2::after{content:'';flex:1;height:1px;background:var(--border)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem}
+.field{display:flex;flex-direction:column;gap:.4rem}
+.field label{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.field input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;color:var(--text);font-family:var(--mono);font-size:.9rem;outline:none;transition:.2s}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
+.field .hint{font-size:.7rem;color:var(--muted)}
+.predict-btn{padding:.8rem 2rem;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:.95rem;font-weight:700;cursor:pointer;transition:.3s;letter-spacing:-.01em}
+.predict-btn:hover{opacity:.85;transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,212,255,.3)}
+.result-box{margin-top:1.5rem;padding:1.5rem;background:var(--surface2);border-radius:10px;border:1px solid var(--border);display:none}
+.result-box.show{display:block;animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.result-item{text-align:center}
+.result-item .rv{font-size:2rem;font-weight:700;font-family:var(--mono)}
+.result-item .rl{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:.25rem}
+.rec-list{margin-top:1.25rem;padding:1rem;background:var(--bg);border-radius:8px;border-left:3px solid var(--accent)}
+.rec-list h4{font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:.5rem}
+.rec-list ul{list-style:none;display:flex;flex-direction:column;gap:.35rem}
+.rec-list li{font-size:.85rem;color:var(--muted);display:flex;gap:.5rem}
+.rec-list li::before{content:"→";color:var(--accent);flex-shrink:0}
+
+/* UPLOAD SECTION */
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:3rem;text-align:center;cursor:pointer;transition:.3s;position:relative}
+.upload-zone:hover,.upload-zone.dragging{border-color:var(--accent);background:rgba(0,212,255,.04)}
+.upload-icon{font-size:3rem;margin-bottom:1rem;opacity:.4}
+.upload-zone h3{font-size:1rem;margin-bottom:.5rem}
+.upload-zone p{color:var(--muted);font-size:.85rem}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-results{margin-top:1.5rem}
+
+/* NOTIFICATIONS */
+.toast{position:fixed;bottom:2rem;right:2rem;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.5rem;font-size:.9rem;z-index:1000;transform:translateY(100px);opacity:0;transition:.3s;display:flex;align-items:center;gap:.75rem}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-color:var(--safe);color:var(--safe)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+
+/* SECTION VISIBILITY */
+.section{display:none;max-width:1400px;margin:0 auto;padding:0 2rem 3rem;position:relative;z-index:1}
+.section.active{display:block}
+
+
+/* ALERT SECTION */
+.alert-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:2rem;margin-bottom:2rem}
+.alert-section h2{font-size:1.1rem;font-weight:600;letter-spacing:-.02em;margin-bottom:1.5rem;display:flex;align-items:center;gap:.75rem}
+.alert-section h2::after{content:'';flex:1;height:1px;background:var(--border)}
+.alert-methods{display:flex;gap:.75rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.method-btn{padding:.55rem 1.25rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:var(--font);font-size:.85rem;cursor:pointer;transition:.2s;font-weight:500}
+.method-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.08)}
+.alert-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-bottom:1.5rem}
+.alert-preview{background:var(--surface2);border-radius:10px;border:1px solid var(--border);padding:1.25rem;margin-bottom:1.25rem}
+.alert-preview h4{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.75rem}
+.msg-preview{font-size:.85rem;line-height:1.7;color:var(--text);white-space:pre-line}
+.send-btn{padding:.8rem 2rem;background:linear-gradient(135deg,#ef4444,#f59e0b);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:.95rem;font-weight:700;cursor:pointer;transition:.3s}
+.send-btn:hover{opacity:.85;transform:translateY(-1px);box-shadow:0 8px 24px rgba(239,68,68,.3)}
+.risk-filter-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.25rem}
+.risk-filter-chip{padding:.4rem 1rem;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:.8rem;cursor:pointer;transition:.2s;font-weight:500}
+.risk-filter-chip.active.high{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4);color:#fca5a5}
+.risk-filter-chip.active.medium{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.4);color:#fcd34d}
+.risk-filter-chip.active.low{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.4);color:#6ee7b7}
+.alert-log{margin-top:1.25rem;max-height:200px;overflow-y:auto}
+.log-entry{display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--border);font-size:.82rem}
+.log-time{font-family:var(--mono);color:var(--muted);font-size:.75rem;white-space:nowrap}
+.log-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* CHART */
+.chart-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;margin-bottom:2rem}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem}
+.chart-card h3{font-size:.85rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:1.25rem}
+.donut-wrap{display:flex;align-items:center;gap:2rem}
+.donut-svg{flex-shrink:0}
+.legend{display:flex;flex-direction:column;gap:.6rem}
+.leg-item{display:flex;align-items:center;gap:.6rem;font-size:.82rem}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.leg-val{margin-left:auto;font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.hbar-wrap{display:flex;flex-direction:column;gap:.75rem}
+.hbar-item label{font-size:.8rem;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:.3rem}
+.hbar-bg{background:var(--border);border-radius:4px;height:8px;overflow:hidden}
+.hbar-fill{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.16,1,.3,1)}
+
+/* empty state */
+.empty{text-align:center;padding:4rem 2rem;color:var(--muted)}
+.empty-icon{font-size:3rem;opacity:.3;margin-bottom:1rem}
+.empty p{font-size:.9rem}
+#pw-modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(5,7,10,.75);place-items:center;padding:1rem}
+#pw-modal.open{display:grid}
+#pw-modal form{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.75rem;width:min(92vw,400px);font-family:var(--font)}
+#pw-modal h2{color:var(--text);font-size:1.15rem;margin-bottom:1rem}
+#pw-modal input,#pw-modal button{width:100%;padding:.75rem 1rem;border-radius:8px;font-size:.95rem;margin-bottom:.7rem;font-family:var(--font)}
+#pw-modal input{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+#pw-modal input:focus{outline:none;border-color:var(--accent)}
+#pw-modal .ok{background:var(--accent);border:0;color:#04121a;font-weight:700;cursor:pointer}
+#pw-modal .cancel{background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer}
+#pw-msg{font-size:.85rem;margin-bottom:.7rem;display:none}
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<div class="glow-top"></div>
+
+<nav>
+  <div class="nav-brand"><div class="dot"></div> SPWS</div>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+    <button class="tab-btn" onclick="switchTab('students')">Students</button>
+    <button class="tab-btn" onclick="switchTab('predict')">Predict</button>
+    <button class="tab-btn" onclick="switchTab('upload')">Upload</button>
+    <button class="tab-btn" onclick="switchTab('alerts')">⚠ Alerts</button>
+    <button class="tab-btn" type="button" onclick="openPwModal()">🔑 Password</button>
+    <form method="post" action="/logout" style="display:inline"><button class="tab-btn" type="submit">Logout</button></form>
+  </div>
+</nav>
+
+<div id="pw-modal">
+  <form id="pw-form" autocomplete="off">
+    <h2>Change password</h2>
+    <input type="password" id="pw-old" placeholder="Current password" required>
+    <input type="password" id="pw-new" placeholder="New password (8+ characters)" required minlength="8">
+    <input type="password" id="pw-new2" placeholder="Confirm new password" required minlength="8">
+    <div id="pw-msg"></div>
+    <button type="submit" class="ok">Save new password</button>
+    <button type="button" class="cancel" onclick="closePwModal()">Cancel</button>
+  </form>
+</div>
+
+<!-- OVERVIEW -->
+<div id="tab-overview" class="section active">
+  <div class="hero">
+    <h1>Student Performance<br><span>Warning System</span></h1>
+    <p>ML-powered academic risk detection across all subjects</p>
+    <div id="stats-grid" class="stats-grid"></div>
+    <div class="subj-tabs" id="overview-subj-tabs"></div>
+    <div class="chart-container" id="chart-container"></div>
+  </div>
+</div>
+
+<!-- STUDENTS -->
+<div id="tab-students" class="section">
+  <div class="hero">
+    <h1>Student <span>Results</span></h1>
+    <p>ML predictions and risk classification for all students</p>
+    <div class="subj-tabs" id="students-subj-tabs"></div>
+    <div class="controls">
+      <div class="search-box">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="search-input" placeholder="Search by name or ID..." oninput="renderTable()">
+      </div>
+      <select id="risk-filter" onchange="renderTable()">
+        <option value="">All Risk Levels</option>
+        <option value="High Risk">High Risk</option>
+        <option value="Medium Risk">Medium Risk</option>
+        <option value="Low Risk">Low Risk</option>
+      </select>
+      <select id="sort-by" onchange="renderTable()">
+        <option value="pred_total_desc">Total Score ↓</option>
+        <option value="pred_total_asc">Total Score ↑</option>
+        <option value="pred_final_desc">Final Score ↓</option>
+        <option value="midterm_desc">Midterm ↓</option>
+        <option value="name_asc">Name A-Z</option>
+      </select>
+      <div class="count-badge" id="count-badge">— students</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>ID</th><th>Name</th><th>Midterm</th><th>Total Lecture</th><th>Total Section</th>
+          <th>Predicted Final</th><th>Predicted Total</th><th>Risk Level</th><th>Actual Total</th>
+        </tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PREDICT -->
+<div id="tab-predict" class="section">
+  <div class="hero">
+    <h1>Predict <span>Student</span></h1>
+    <p>Enter student scores to get instant AI predictions</p>
+    <div class="predict-section">
+      <h2>New Student Prediction</h2>
+      <div style="margin-bottom:1rem">
+        <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;display:block;margin-bottom:.5rem">Subject</label>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap" id="pred-subj-tabs"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Quiz 1 (Lecture)</label><input type="number" id="p-q1l" min="0" max="10" placeholder="0-10"><div class="hint">Max: 10</div></div>
+        <div class="field"><label>Quiz 2 (Lecture)</label><input type="number" id="p-q2l" min="0" max="10" placeholder="0-10"><div class="hint">Max: 10</div></div>
+        <div class="field"><label>Total Lecture</label><input type="number" id="p-tlec" min="0" max="20" placeholder="0-20"><div class="hint">Max: 20</div></div>
+        <div class="field"><label>Quiz 1 (Section)</label><input type="number" id="p-q1s" min="0" max="10" placeholder="0-10"><div class="hint">Max: 10</div></div>
+        <div class="field"><label>Quiz 2 (Section)</label><input type="number" id="p-q2s" min="0" max="10" placeholder="0-10"><div class="hint">Max: 10</div></div>
+        <div class="field"><label>Total Section</label><input type="number" id="p-tsec" min="0" max="20" placeholder="0-20"><div class="hint">Max: 20</div></div>
+        <div class="field"><label>Midterm</label><input type="number" id="p-mid" min="0" max="20" placeholder="0-20"><div class="hint">Max: 20</div></div>
+      </div>
+      <button class="predict-btn" onclick="runPrediction()">⚡ Run Prediction</button>
+      <div class="result-box" id="result-box">
+        <div class="result-grid" id="result-grid"></div>
+        <div class="rec-list" id="rec-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UPLOAD -->
+<div id="tab-upload" class="section">
+  <div class="hero">
+    <h1>Upload <span>New Data</span></h1>
+    <p>Upload an Excel file with student scores for batch prediction</p>
+    <div class="predict-section">
+      <h2>Batch Prediction Upload</h2>
+      <div class="upload-zone" id="upload-zone" ondragover="event.preventDefault();this.classList.add('dragging')" ondragleave="this.classList.remove('dragging')" ondrop="handleDrop(event)">
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(this)">
+        <div class="upload-icon">&#128193;</div>
+        <h3>Drop your Excel file here</h3>
+        <p>Supports .xlsx &#8212; requires columns: student_ID, name, quiz1_lec, quiz2_lec, total_lecture, quiz1_section, quiz2_section, quiz3_section, total_section, midterm, Subject</p>
+      </div>
+      <div id="upload-results" class="upload-results"></div>
+    </div>
+
+    <div class="predict-section" style="margin-top:2rem">
+      <h2>Add New Subject</h2>
+      <p style="color:var(--muted);font-size:.85rem;margin-bottom:1.5rem">Upload data for a brand-new subject &#8212; the system trains a model instantly and adds it to all tabs.</p>
+      <div class="form-grid" style="margin-bottom:1.25rem">
+        <div class="field">
+          <label>Subject Name</label>
+          <input type="text" id="new-subj-name" placeholder="e.g. Calculus, Statistics..." style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;color:var(--text);font-family:var(--font);font-size:.9rem;outline:none">
+          <div class="hint">Must be unique &#8212; different from existing subjects</div>
+        </div>
+        <div class="field">
+          <label>Final Exam Max Score</label>
+          <input type="number" id="new-subj-final-max" value="40" min="1" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;color:var(--text);font-family:var(--mono);font-size:.9rem;outline:none">
+          <div class="hint">Default: 40</div>
+        </div>
+      </div>
+      <div class="upload-zone" id="new-subj-zone" style="margin-bottom:1.25rem" ondragover="event.preventDefault();document.getElementById('new-subj-zone').classList.add('dragging')" ondragleave="document.getElementById('new-subj-zone').classList.remove('dragging')" ondrop="handleNewSubjDrop(event)">
+        <input type="file" id="new-subj-file" accept=".xlsx,.xls,.csv" onchange="handleNewSubjFile(this)">
+        <div class="upload-icon">&#128194;</div>
+        <h3 id="new-subj-filename">Drop subject Excel file here</h3>
+        <p>Required: student_ID, name, quiz1_lec, quiz2_lec, total_lecture, quiz1_section, quiz2_section, quiz3_section, total_section, midterm, final, final_total, final_result</p>
+      </div>
+      <div id="new-subj-preview" style="display:none;margin-bottom:1.25rem;padding:1rem;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.75rem">File Preview</div>
+        <div id="new-subj-preview-content"></div>
+      </div>
+      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+        <button class="predict-btn" onclick="addNewSubject()" style="background:linear-gradient(135deg,var(--accent3),var(--accent2))">+ Add Subject &amp; Train Model</button>
+        <div id="new-subj-status" style="font-size:.85rem;color:var(--muted)"></div>
+      </div>
+      <div id="new-subj-results" style="margin-top:1.5rem"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ALERTS -->
+<div id="tab-alerts" class="section">
+  <div class="hero">
+    <h1>Send <span>Alerts</span></h1>
+    <p>Notify students and guardians about academic risk</p>
+    
+    <div class="alert-section">
+      <h2>Alert Configuration</h2>
+
+      <div style="margin-bottom:1.25rem">
+        <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;display:block;margin-bottom:.6rem">Subject</label>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap" id="alert-subj-tabs"></div>
+      </div>
+
+      <div style="margin-bottom:1.25rem">
+        <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;display:block;margin-bottom:.6rem">Send alerts to students at risk:</label>
+        <div class="risk-filter-row">
+          <button class="risk-filter-chip active high" id="chip-high" onclick="toggleChip('high')">🔴 High Risk</button>
+          <button class="risk-filter-chip active medium" id="chip-medium" onclick="toggleChip('medium')">🟡 Medium Risk</button>
+          <button class="risk-filter-chip low" id="chip-low" onclick="toggleChip('low')">🟢 Low Risk</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:1.25rem">
+        <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;display:block;margin-bottom:.6rem">Notification Method</label>
+        <div class="alert-methods">
+          <button class="method-btn active" id="method-email" onclick="setMethod('email')">✉ Email</button>
+          <button class="method-btn" id="method-sms" onclick="setMethod('sms')">📱 SMS</button>
+          <button class="method-btn" id="method-both" onclick="setMethod('both')">✉ + 📱 Both</button>
+        </div>
+      </div>
+
+      <div class="alert-form-grid">
+        <div class="field">
+          <label>Sender Name / Department</label>
+          <input type="text" id="alert-sender" value="Academic Affairs Office" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;color:var(--text);font-family:var(--font);font-size:.9rem;outline:none">
+        </div>
+        <div class="field" id="email-field">
+          <label>Reply-to Email</label>
+          <input type="email" id="alert-email" placeholder="advisor@university.edu" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;color:var(--text);font-family:var(--font);font-size:.9rem;outline:none">
+        </div>
+        <div class="field" id="phone-field" style="display:none">
+          <label>Sender Phone / Short Code</label>
+          <input type="text" id="alert-phone" placeholder="+20 100 000 0000" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;color:var(--text);font-family:var(--font);font-size:.9rem;outline:none">
+        </div>
+      </div>
+
+      <div style="margin-bottom:1rem">
+        <label style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;display:block;margin-bottom:.6rem">Custom Message (optional)</label>
+        <textarea id="alert-custom-msg" rows="3" placeholder="Leave blank to use the auto-generated message per student risk level..." style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;color:var(--text);font-family:var(--font);font-size:.85rem;outline:none;resize:vertical;line-height:1.6"></textarea>
+      </div>
+
+      <div class="alert-preview">
+        <h4>Message Preview (High Risk example)</h4>
+        <div class="msg-preview" id="msg-preview"></div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+        <button class="send-btn" onclick="sendAlerts()">⚡ Send Alerts Now</button>
+        <div id="alert-target-count" style="font-size:.85rem;color:var(--muted)"></div>
+      </div>
+
+      <div id="alert-log" class="alert-log" style="display:none">
+        <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.5rem">Send Log</div>
+        <div id="log-entries"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast">✓ <span id="toast-msg"></span></div>
+
+<script>
+let PREDICTIONS = [], STATS = {}, SUBJECTS = [];
+
+
+let currentSubj;
+let currentSubjStudents;
+let currentSubjPred;
+let currentPage = 1;
+const PER_PAGE = 20;
+
+function switchTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+  if (tab === 'students') renderTable();
+}
+
+// ============ OVERVIEW ============
+function buildOverviewSubjTabs() {
+  const c = document.getElementById('overview-subj-tabs');
+  c.innerHTML = SUBJECTS.map(s => 
+    `<button class="subj-tab ${s===currentSubj?'active':''}" onclick="setOverviewSubj('${s}')">${s}</button>`
+  ).join('');
+}
+
+function setOverviewSubj(s) {
+  currentSubj = s;
+  buildOverviewSubjTabs();
+  renderStats();
+  renderCharts();
+}
+
+function renderStats() {
+  const st = STATS[currentSubj];
+  const sub = PREDICTIONS.filter(p => p.subject === currentSubj);
+  const avgPredTotal = (sub.reduce((a,b) => a + b.pred_total, 0) / sub.length).toFixed(1);
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card accent"><div class="stat-label">Total Students</div><div class="stat-value">${sub.length}</div><div class="stat-sub">${currentSubj}</div></div>
+    <div class="stat-card safe"><div class="stat-label">Low Risk</div><div class="stat-value">${st.low_risk}</div><div class="stat-sub">${((st.low_risk/sub.length)*100).toFixed(0)}% of class</div></div>
+    <div class="stat-card warn"><div class="stat-label">Medium Risk</div><div class="stat-value">${st.med_risk}</div><div class="stat-sub">${((st.med_risk/sub.length)*100).toFixed(0)}% of class</div></div>
+    <div class="stat-card danger"><div class="stat-label">High Risk</div><div class="stat-value">${st.high_risk}</div><div class="stat-sub">${((st.high_risk/sub.length)*100).toFixed(0)}% of class</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Predicted Total</div><div class="stat-value" style="color:var(--accent)">${avgPredTotal}</div><div class="stat-sub">out of 100</div></div>
+    <div class="stat-card safe"><div class="stat-label">Pass Rate</div><div class="stat-value">${st.pass_rate}%</div><div class="stat-sub">actual results</div></div>
+  `;
+}
+
+function renderCharts() {
+  const sub = PREDICTIONS.filter(p => p.subject === currentSubj);
+  const st = STATS[currentSubj];
+  const total = sub.length;
+  const lr = st.low_risk, mr = st.med_risk, hr = st.high_risk;
+  
+  // Donut chart data
+  const slices = [
+    {val:lr, color:'#10b981', label:'Low Risk'},
+    {val:mr, color:'#f59e0b', label:'Medium Risk'},
+    {val:hr, color:'#ef4444', label:'High Risk'}
+  ];
+  let offset = 0, paths = '';
+  const cx=70, cy=70, r=55, ir=35;
+  slices.forEach(s => {
+    const frac = s.val/total;
+    const angle = frac * 2 * Math.PI;
+    const x1 = cx + r * Math.sin(offset * 2 * Math.PI / total);
+    const y1 = cy - r * Math.cos(offset * 2 * Math.PI / total);
+    const x2 = cx + r * Math.sin((offset + s.val) * 2 * Math.PI / total);
+    const y2 = cy - r * Math.cos((offset + s.val) * 2 * Math.PI / total);
+    const xi1 = cx + ir * Math.sin(offset * 2 * Math.PI / total);
+    const yi1 = cy - ir * Math.cos(offset * 2 * Math.PI / total);
+    const xi2 = cx + ir * Math.sin((offset + s.val) * 2 * Math.PI / total);
+    const yi2 = cy - ir * Math.cos((offset + s.val) * 2 * Math.PI / total);
+    const lg = frac > 0.5 ? 1 : 0;
+    paths += `<path d="M${x1},${y1} A${r},${r} 0 ${lg},1 ${x2},${y2} L${xi2},${yi2} A${ir},${ir} 0 ${lg},0 ${xi1},${yi1} Z" fill="${s.color}" opacity=".85"/>`;
+    offset += s.val;
+  });
+
+  // Score distribution buckets
+  const buckets = [0,0,0,0,0]; // <50, 50-60, 60-70, 70-80, 80+
+  sub.forEach(p => {
+    const t = p.pred_total;
+    if(t<50) buckets[0]++;
+    else if(t<60) buckets[1]++;
+    else if(t<70) buckets[2]++;
+    else if(t<80) buckets[3]++;
+    else buckets[4]++;
+  });
+  const maxB = Math.max(...buckets);
+  const buckLabels = ['< 50','50–60','60–70','70–80','80+'];
+  const buckColors = ['#ef4444','#f59e0b','#3b82f6','#8b5cf6','#10b981'];
+
+  // Avg scores
+  const avgMid = (sub.reduce((a,b)=>a+b.midterm,0)/sub.length).toFixed(1);
+  const avgFinal = (sub.reduce((a,b)=>a+b.pred_final,0)/sub.length).toFixed(1);
+  const avgTotal = (sub.reduce((a,b)=>a+b.pred_total,0)/sub.length).toFixed(1);
+
+  document.getElementById('chart-container').innerHTML = `
+    <div class="chart-card">
+      <h3>Risk Distribution</h3>
+      <div class="donut-wrap">
+        <svg class="donut-svg" width="140" height="140" viewBox="0 0 140 140">
+          ${paths}
+          <text x="70" y="66" text-anchor="middle" fill="#e2e8f0" font-size="18" font-weight="700" font-family="DM Mono">${total}</text>
+          <text x="70" y="82" text-anchor="middle" fill="#64748b" font-size="9" font-family="Space Grotesk">STUDENTS</text>
+        </svg>
+        <div class="legend">
+          ${slices.map(s=>`<div class="leg-item"><div class="leg-dot" style="background:${s.color}"></div>${s.label}<span class="leg-val">${s.val}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Score Distribution (Predicted Total)</h3>
+      <div class="hbar-wrap">
+        ${buckLabels.map((l,i)=>`
+          <div class="hbar-item">
+            <label>${l} <span>${buckets[i]} students</span></label>
+            <div class="hbar-bg"><div class="hbar-fill" style="width:${maxB?buckets[i]/maxB*100:0}%;background:${buckColors[i]}"></div></div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Average Scores</h3>
+      <div class="hbar-wrap" style="margin-top:.5rem">
+        <div class="hbar-item"><label>Midterm (out of 20)<span>${avgMid}</span></label><div class="hbar-bg"><div class="hbar-fill" style="width:${avgMid/20*100}%;background:var(--accent2)"></div></div></div>
+        <div class="hbar-item"><label>Predicted Final (out of 40)<span>${avgFinal}</span></label><div class="hbar-bg"><div class="hbar-fill" style="width:${avgFinal/40*100}%;background:var(--accent)"></div></div></div>
+        <div class="hbar-item"><label>Predicted Total (out of 100)<span>${avgTotal}</span></label><div class="hbar-bg"><div class="hbar-fill" style="width:${avgTotal}%;background:var(--accent3)"></div></div></div>
+      </div>
+    </div>
+  `;
+}
+
+// ============ STUDENTS TABLE ============
+function buildStudentsSubjTabs() {
+  const c = document.getElementById('students-subj-tabs');
+  c.innerHTML = SUBJECTS.map(s => 
+    `<button class="subj-tab ${s===currentSubjStudents?'active':''}" onclick="setStudentsSubj('${s}')">${s}</button>`
+  ).join('');
+}
+
+function setStudentsSubj(s) {
+  currentSubjStudents = s;
+  currentPage = 1;
+  buildStudentsSubjTabs();
+  renderTable();
+}
+
+function renderTable() {
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const riskF = document.getElementById('risk-filter').value;
+  const sortBy = document.getElementById('sort-by').value;
+  
+  let data = PREDICTIONS.filter(p => p.subject === currentSubjStudents);
+  if(search) data = data.filter(p => p.name.toLowerCase().includes(search) || p.id.includes(search));
+  if(riskF) data = data.filter(p => p.risk === riskF);
+  
+  data.sort((a,b) => {
+    if(sortBy==='pred_total_desc') return b.pred_total - a.pred_total;
+    if(sortBy==='pred_total_asc') return a.pred_total - b.pred_total;
+    if(sortBy==='pred_final_desc') return b.pred_final - a.pred_final;
+    if(sortBy==='midterm_desc') return b.midterm - a.midterm;
+    if(sortBy==='name_asc') return a.name.localeCompare(b.name);
+    return 0;
+  });
+  
+  document.getElementById('count-badge').textContent = data.length + ' students';
+  
+  const totalPages = Math.ceil(data.length / PER_PAGE);
+  const page = Math.min(currentPage, Math.max(1, totalPages));
+  const slice = data.slice((page-1)*PER_PAGE, page*PER_PAGE);
+  
+  const tbody = document.getElementById('table-body');
+  if(!slice.length) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-icon">🔍</div><p>No students found</p></div></td></tr>`;
+  } else {
+    tbody.innerHTML = slice.map(p => {
+      const riskClass = p.risk === 'High Risk' ? 'high' : p.risk === 'Medium Risk' ? 'medium' : 'low';
+      const totalPct = Math.min(100, p.pred_total);
+      const finalPct = Math.min(100, p.pred_final/40*100);
+      const barColor = p.pred_total >= 65 ? 'var(--safe)' : p.pred_total >= 50 ? 'var(--warn)' : 'var(--danger)';
+      return `<tr>
+        <td><div class="student-id">${p.id}</div></td>
+        <td><div class="student-name">${p.name}</div></td>
+        <td><div class="score-bar"><div class="bar-bg"><div class="bar-fill" style="width:${p.midterm/20*100}%;background:var(--accent2)"></div></div><span class="score-num">${p.midterm}</span></div></td>
+        <td><span class="score-num" style="color:var(--muted)">${p.total_lecture}</span></td>
+        <td><span class="score-num" style="color:var(--muted)">${p.total_section}</span></td>
+        <td><span class="pred-tag">${p.pred_final}</span></td>
+        <td><div class="score-bar"><div class="bar-bg"><div class="bar-fill" style="width:${totalPct}%;background:${barColor}"></div></div><span class="score-num">${p.pred_total}</span></div></td>
+        <td><span class="risk-badge ${riskClass}">${p.risk}</span></td>
+        <td><span class="score-num" style="color:var(--muted)">${p.actual_total}</span></td>
+      </tr>`;
+    }).join('');
+  }
+  
+  // Pagination
+  const pgEl = document.getElementById('pagination');
+  if(totalPages <= 1) { pgEl.innerHTML = ''; return; }
+  let pgHtml = `<button class="pg-btn" onclick="goPage(${page-1})" ${page<=1?'disabled':''}>‹</button>`;
+  for(let i=1;i<=totalPages;i++) {
+    if(i===1||i===totalPages||Math.abs(i-page)<=2) pgHtml += `<button class="pg-btn ${i===page?'active':''}" onclick="goPage(${i})">${i}</button>`;
+    else if(Math.abs(i-page)===3) pgHtml += `<span class="pg-info">…</span>`;
+  }
+  pgHtml += `<button class="pg-btn" onclick="goPage(${page+1})" ${page>=totalPages?'disabled':''}>›</button>`;
+  pgHtml += `<span class="pg-info">Page ${page} / ${totalPages}</span>`;
+  pgEl.innerHTML = pgHtml;
+}
+
+function goPage(p) { currentPage = p; renderTable(); }
+
+// ============ PREDICT TAB ============
+function buildPredSubjTabs() {
+  const c = document.getElementById('pred-subj-tabs');
+  c.innerHTML = SUBJECTS.map(s => 
+    `<button class="subj-tab ${s===currentSubjPred?'active':''}" style="font-size:.8rem;padding:.5rem 1.2rem" onclick="setPredSubj('${s}')">${s}</button>`
+  ).join('');
+}
+
+function setPredSubj(s) { currentSubjPred = s; buildPredSubjTabs(); }
+
+
+
+
+async function runPrediction() {
+  const featureVals = [
+    parseFloat(document.getElementById('p-q1l').value)  || 0,
+    parseFloat(document.getElementById('p-q2l').value)  || 0,
+    parseFloat(document.getElementById('p-tlec').value) || 0,
+    parseFloat(document.getElementById('p-q1s').value)  || 0,
+    parseFloat(document.getElementById('p-q2s').value)  || 0,
+    parseFloat(document.getElementById('p-tsec').value) || 0,
+    parseFloat(document.getElementById('p-mid').value)  || 0
+  ];
+
+  const midterm   = featureVals[6];
+  const total_lec = featureVals[2];
+  const total_sec = featureVals[5];
+  const quiz1_lec = featureVals[0];
+  const quiz2_lec = featureVals[1];
+  const quiz1_sec = featureVals[3];
+  const quiz2_sec = featureVals[4];
+
+  let predFinal; try { predFinal = (await api('/api/predict', {subject: currentSubjPred, features: featureVals})).pred_final; } catch(e) { showToast(e.message, 'error'); return; }
+  const predTotal = Math.min(100, Math.max(0, midterm + total_lec + total_sec + predFinal));
+
+  const risk = predTotal < 50 ? 'High Risk' : predTotal < 65 ? 'Medium Risk' : 'Low Risk';
+  const riskClass = risk === 'High Risk' ? 'high' : risk === 'Medium Risk' ? 'medium' : 'low';
+
+  const recs = [];
+  if (midterm < 12)                     recs.push("Midterm is critically low — intensive review of core material is essential before the final exam");
+  else if (midterm < 16)                recs.push("Midterm score is below average — focus on understanding weak topics before finals");
+  if (total_lec < 8)                    recs.push("Lecture participation is very low — consistent attendance directly impacts your total score");
+  else if (total_lec < 14)             recs.push("Lecture score can be improved — try to engage more actively in lectures");
+  if (total_sec < 6)                    recs.push("Section score is very weak — practice section exercises regularly and attend all sessions");
+  else if (total_sec < 12)             recs.push("Section performance needs improvement — review section material and attempt more problems");
+  if (quiz1_lec < 5 || quiz2_lec < 5) recs.push("Lecture quiz scores are low — revisit lecture notes and practice past quiz questions");
+  if (quiz1_sec < 5 || quiz2_sec < 5) recs.push("Section quiz scores indicate gaps — work through section problem sets thoroughly");
+  if (predTotal < 50)                   recs.push("⚠️ High risk of failing — consider meeting with your instructor or academic advisor urgently");
+  if (recs.length === 0)                recs.push("Excellent standing! Keep up the current performance and maintain consistency through finals");
+
+  const rb = document.getElementById('result-box');
+  rb.classList.add('show');
+  document.getElementById('result-grid').innerHTML = `
+    <div class="result-item">
+      <div class="rv" style="color:var(--accent)">${predFinal.toFixed(1)}</div>
+      <div class="rl">Predicted Final<br><span style="font-size:.7rem;color:var(--muted)">out of 40</span></div>
+    </div>
+    <div class="result-item">
+      <div class="rv" style="color:var(--accent3)">${predTotal.toFixed(1)}</div>
+      <div class="rl">Predicted Total<br><span style="font-size:.7rem;color:var(--muted)">out of 100</span></div>
+    </div>
+    <div class="result-item">
+      <div class="rv"><span class="risk-badge ${riskClass}" style="font-size:1rem;padding:.5rem 1rem">${risk}</span></div>
+      <div class="rl">Risk Level</div>
+    </div>
+  `;
+  document.getElementById('rec-list').innerHTML = `
+    <h4>Recommendations</h4>
+    <ul>${recs.map(r => `<li>${r}</li>`).join('')}</ul>
+  `;
+}
+
+// ============ UPLOAD ============
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('dragging');
+  const f = e.dataTransfer.files[0];
+  if(f) processUploadFile(f);
+}
+
+function handleFileUpload(inp) {
+  if(inp.files[0]) processUploadFile(inp.files[0]);
+}
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(url, body, isForm) {
+  const r = await fetch(url, {method: body ? 'POST' : 'GET', credentials: 'same-origin',
+    headers: body && !isForm ? {'Content-Type': 'application/json'} : {},
+    body: body ? (isForm ? body : JSON.stringify(body)) : undefined});
+  if (r.status === 401) { location.href = '/login'; throw new Error('Session expired'); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(typeof j.detail === 'string' ? j.detail : 'Request failed (' + r.status + ')');
+  return j;
+}
+async function loadData() { const d = await api('/api/data'); PREDICTIONS = d.predictions; STATS = d.stats; SUBJECTS = d.subjects; }
+function rebuildSubjectTabs() { buildOverviewSubjTabs(); buildStudentsSubjTabs(); buildPredSubjTabs(); buildAlertSubjTabs(); }
+const riskCls = r => r === 'High Risk' ? 'high' : r === 'Medium Risk' ? 'medium' : 'low';
+function statCards(n, l, m, h, label) {
+  return `<div style="display:flex;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap">
+    <div class="stat-card accent" style="flex:1;min-width:140px"><div class="stat-label">${label}</div><div class="stat-value">${n}</div></div>
+    <div class="stat-card safe" style="flex:1;min-width:140px"><div class="stat-label">Low Risk</div><div class="stat-value">${l}</div></div>
+    <div class="stat-card warn" style="flex:1;min-width:140px"><div class="stat-label">Medium Risk</div><div class="stat-value">${m}</div></div>
+    <div class="stat-card danger" style="flex:1;min-width:140px"><div class="stat-label">High Risk</div><div class="stat-value">${h}</div></div></div>`;
+}
+
+async function processUploadFile(file) {
+  const res = document.getElementById('upload-results');
+  res.innerHTML = `<div style="color:var(--muted);padding:1rem;text-align:center">⏳ Processing ${esc(file.name)}...</div>`;
+  try {
+    const fd = new FormData(); fd.append('file', file); fd.append('subject', currentSubjPred);
+    const d = await api('/api/batch-predict', fd, true);
+    const c = k => d.results.filter(r => r.risk === k).length;
+    res.innerHTML = statCards(d.total, c('Low Risk'), c('Medium Risk'), c('High Risk'), 'Processed') +
+      `<div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Subject</th><th>Pred. Final</th><th>Pred. Total</th><th>Risk</th></tr></thead><tbody>` +
+      d.results.slice(0, 50).map(r => `<tr><td><span class="student-id">${r.id}</span></td><td>${r.name}</td><td>${r.subject}</td><td class="pred-tag">${r.pred_final}</td><td>${r.pred_total}</td><td><span class="risk-badge ${riskCls(r.risk)}">${r.risk}</span></td></tr>`).join('') +
+      (d.total > 50 ? `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">+ ${d.total - 50} more students...</td></tr>` : '') + `</tbody></table></div>`;
+    showToast('Processed ' + d.total + ' students', 'success');
+  } catch (err) { res.innerHTML = `<div style="color:var(--danger);padding:1rem">❌ ${esc(err.message)}</div>`; }
+}
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+
+// ============ ALERTS ============
+let currentSubjAlert;
+let alertMethod = 'email';
+let activeChips = new Set(['high','medium']);
+
+function buildAlertSubjTabs() {
+  const c = document.getElementById('alert-subj-tabs');
+  c.innerHTML = SUBJECTS.map(s =>
+    `<button class="subj-tab ${s===currentSubjAlert?'active':''}" style="font-size:.8rem;padding:.5rem 1.2rem" onclick="setAlertSubj('${s}')">${s}</button>`
+  ).join('');
+  updateAlertCount();
+  updateMsgPreview();
+}
+
+function setAlertSubj(s) { currentSubjAlert = s; buildAlertSubjTabs(); }
+
+function toggleChip(level) {
+  if(activeChips.has(level)) activeChips.delete(level);
+  else activeChips.add(level);
+  const chip = document.getElementById('chip-'+level);
+  chip.classList.toggle('active');
+  updateAlertCount();
+  updateMsgPreview();
+}
+
+function setMethod(m) {
+  alertMethod = m;
+  document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('method-'+m).classList.add('active');
+  document.getElementById('email-field').style.display = (m==='sms') ? 'none' : '';
+  document.getElementById('phone-field').style.display = (m==='email') ? 'none' : '';
+  updateMsgPreview();
+}
+
+function getTargetStudents() {
+  const riskMap = {'high':'High Risk','medium':'Medium Risk','low':'Low Risk'};
+  const activeRisks = [...activeChips].map(c => riskMap[c]);
+  return PREDICTIONS.filter(p => p.subject === currentSubjAlert && activeRisks.includes(p.risk));
+}
+
+function updateAlertCount() {
+  const t = getTargetStudents();
+  const el = document.getElementById('alert-target-count');
+  if(el) el.textContent = `Will send to ${t.length} student${t.length!==1?'s':''}`;
+}
+
+function generateMessage(student, method) {
+  const custom = document.getElementById('alert-custom-msg')?.value?.trim();
+  const sender = document.getElementById('alert-sender')?.value || 'Academic Affairs';
+  if(custom) return custom;
+  
+  const riskMsg = {
+    'High Risk': `⚠️ URGENT ACADEMIC WARNING\n\nDear ${student.name},\n\nThis is an official notice from ${sender}.\n\nBased on your current academic performance in ${student.subject}, you are classified as HIGH RISK with a predicted total score of ${student.pred_total}/100.\n\nImmediate action is required:\n→ Meet with your course instructor this week\n→ Attend all remaining lectures and sections\n→ Review midterm material and practice past exams\n\nYour predicted final exam score is ${student.pred_final}/40. Significant improvement is needed.\n\nPlease contact your academic advisor immediately.\n\n${sender}`,
+    'Medium Risk': `📌 Academic Performance Notice\n\nDear ${student.name},\n\nThis message is from ${sender}.\n\nYour current performance in ${student.subject} places you in the MEDIUM RISK category. Predicted total: ${student.pred_total}/100.\n\nWe recommend:\n→ Increasing attendance and participation\n→ Reviewing lecture and section materials\n→ Seeking help from TAs or tutoring services\n\nWith consistent effort, you can improve before finals.\n\n${sender}`,
+    'Low Risk': `✅ Academic Performance Update\n\nDear ${student.name},\n\nGreat news from ${sender}!\n\nYou are in good academic standing in ${student.subject}. Predicted total: ${student.pred_total}/100.\n\nKeep up the excellent work and stay consistent through the final exam.\n\n${sender}`
+  };
+  return riskMsg[student.risk] || '';
+}
+
+function updateMsgPreview() {
+  const el = document.getElementById('msg-preview');
+  if(!el) return;
+  const sub = PREDICTIONS.filter(p => p.subject === currentSubjAlert && p.risk === 'High Risk');
+  if(!sub.length) { el.textContent = 'No high-risk students found.'; return; }
+  el.textContent = generateMessage(sub[0], alertMethod);
+}
+
+async function sendAlerts() {
+  const targets = getTargetStudents();
+  if (!targets.length) { showToast('No students match selected filters', 'error'); return; }
+  const messages = {}; targets.slice(0, 500).forEach(s => messages[s.id] = generateMessage(s, alertMethod));
+  const risks = [...activeChips].map(c => ({high:'High Risk', medium:'Medium Risk', low:'Low Risk'}[c]));
+  try {
+    const d = await api('/api/alerts/send', {subject: currentSubjAlert, risks, method: alertMethod, messages,
+      sender: document.getElementById('alert-sender').value, reply_to: document.getElementById('alert-email').value});
+    document.getElementById('alert-log').style.display = 'block';
+    const colors = {'High Risk':'#ef4444','Medium Risk':'#f59e0b','Low Risk':'#10b981'};
+    document.getElementById('log-entries').innerHTML = d.log.slice(0, 100).map(l => `<div class="log-entry"><span class="log-time">${new Date().toLocaleTimeString()}</span><div class="log-dot" style="background:${colors[l.risk]}"></div><span style="flex:1">${l.name} — ${l.risk}</span><span style="color:var(--muted);font-size:.75rem">${esc(l.status)}</span></div>`).join('');
+    showToast(`${d.sent} sent, ${d.skipped} skipped`, d.sent ? 'success' : 'error');
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+// Init alerts tab when switched
+const origSwitchTab = switchTab;
+function switchTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+  if(tab === 'students') renderTable();
+  if(tab === 'alerts') { buildAlertSubjTabs(); updateMsgPreview(); updateAlertCount(); }
+}
+
+
+// ============ ADD NEW SUBJECT ============
+let newSubjData = null;
+let newSubjFile = null;
+
+function loadXLSX(cb) {
+  if (window.XLSX) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+function handleNewSubjDrop(e) {
+  e.preventDefault();
+  document.getElementById('new-subj-zone').classList.remove('dragging');
+  const f = e.dataTransfer.files[0];
+  if (f) readNewSubjFile(f);
+}
+
+function handleNewSubjFile(inp) {
+  if (inp.files[0]) readNewSubjFile(inp.files[0]);
+}
+
+function readNewSubjFile(file) {
+  newSubjFile = file;
+  document.getElementById('new-subj-status').textContent = 'Reading file...';
+  loadXLSX(() => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb   = XLSX.read(e.target.result, {type:'binary'});
+        const ws   = wb.Sheets[wb.SheetNames[0]];
+        newSubjData = XLSX.utils.sheet_to_json(ws);
+
+        document.getElementById('new-subj-filename').textContent = file.name + '  (' + newSubjData.length + ' rows)';
+        document.getElementById('new-subj-zone').style.borderColor = 'var(--accent3)';
+
+        // Preview first 3 rows
+        const cols = Object.keys(newSubjData[0] || {});
+        const preview = document.getElementById('new-subj-preview');
+        preview.style.display = 'block';
+        document.getElementById('new-subj-preview-content').innerHTML =
+          '<div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem">Columns detected: <span style="color:var(--accent)">' + cols.join(', ') + '</span></div>' +
+          '<div style="font-size:.8rem;color:var(--muted)">' + newSubjData.length + ' students found</div>';
+
+        document.getElementById('new-subj-status').textContent = 'File ready — fill in the subject name and click Add.';
+      } catch(err) {
+        document.getElementById('new-subj-status').textContent = 'Error reading file: ' + err.message;
+      }
+    };
+    reader.readAsBinaryString(file);
+  });
+}
+
+async function addNewSubject() {
+  const name = document.getElementById('new-subj-name').value.trim();
+  const st = document.getElementById('new-subj-status'), out = document.getElementById('new-subj-results');
+  if (!name) { st.style.color = 'var(--danger)'; st.textContent = '❌ Enter a subject name first.'; return; }
+  if (!newSubjFile) { st.style.color = 'var(--danger)'; st.textContent = '❌ Upload an Excel file first.'; return; }
+  st.style.color = 'var(--accent)'; st.textContent = '⚙️ Training model on server... please wait';
+  try {
+    const fd = new FormData(); fd.append('file', newSubjFile); fd.append('name', name);
+    fd.append('final_max', document.getElementById('new-subj-final-max').value || 40);
+    const d = (await api('/api/subjects', fd, true)).stats;
+    await loadData(); rebuildSubjectTabs();
+    out.innerHTML = statCards(d.students, d.low_risk, d.med_risk, d.high_risk, 'Students');
+    st.style.color = 'var(--safe)'; st.textContent = '✅ Subject "' + name + '" added and saved!';
+    showToast('Subject "' + name + '" added — ' + d.students + ' students', 'success');
+    newSubjData = null; newSubjFile = null;
+    document.getElementById('new-subj-zone').style.borderColor = '';
+    document.getElementById('new-subj-filename').textContent = 'Drop subject Excel file here';
+    document.getElementById('new-subj-preview').style.display = 'none';
+    document.getElementById('new-subj-name').value = '';
+  } catch (e) { st.style.color = 'var(--danger)'; st.textContent = '❌ ' + e.message; }
+}
+
+// ============ INIT ============
+(async () => {
+  try { await loadData(); } catch (e) { return; }
+  currentSubj = currentSubjStudents = currentSubjPred = currentSubjAlert = SUBJECTS[0];
+  buildOverviewSubjTabs(); renderStats(); renderCharts(); buildStudentsSubjTabs(); buildPredSubjTabs();
+})();
+</script>
+<script>
+function pwMsg(t,good){const m=document.getElementById('pw-msg');m.textContent=t;m.style.color=good?'var(--safe)':'var(--danger)';m.style.display='block';}
+function openPwModal(){document.getElementById('pw-form').reset();document.getElementById('pw-msg').style.display='none';document.getElementById('pw-modal').classList.add('open');}
+function closePwModal(){document.getElementById('pw-modal').classList.remove('open');}
+document.getElementById('pw-form').addEventListener('submit',async ev=>{
+  ev.preventDefault();
+  const cur=document.getElementById('pw-old').value,nw=document.getElementById('pw-new').value,n2=document.getElementById('pw-new2').value;
+  if(nw!==n2)return pwMsg('New passwords do not match');
+  try{
+    const r=await fetch('/api/change-password',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({current:cur,new:nw})});
+    const j=await r.json().catch(()=>({}));
+    if(r.status===401){location.href='/login';return;}
+    if(!r.ok)return pwMsg(typeof j.detail==='string'?j.detail:'Request failed ('+r.status+')');
+    pwMsg('Password changed successfully',true);setTimeout(closePwModal,1200);
+  }catch(e){pwMsg('Network error')}
+});
+</script>
+</body>
+</html>
